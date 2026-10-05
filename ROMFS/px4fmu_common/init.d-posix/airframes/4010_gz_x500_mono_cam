@@ -8,3 +8,48 @@
 PX4_SIM_MODEL=${PX4_SIM_MODEL:=x500_mono_cam}
 
 . ${R}etc/init.d-posix/airframes/4001_gz_x500
+
+# EKF2: external vision horizontal/vertical position + 3D velocity, NO yaw.
+# Bit 3 (yaw) is deliberately OFF: monocular VIO global yaw is unobservable
+# and drifts tens of degrees in flight. Fusing it caused yaw reset storms
+# that corrupted body-frame velocity fusion, after which EKF2 exhausted its
+# EV velocity resets, stopped velocity fusion, and mc_pos_control triggered
+# "Failsafe: blind land". Yaw is instead inferred from pos+body-vel
+# consistency.
+#   bit 0: horizontal position
+#   bit 1: vertical position
+#   bit 2: 3D velocity
+param set-default EKF2_EV_CTRL 7
+param set-default EKF2_HGT_REF 3
+param set-default EKF2_GPS_CTRL 0
+param set-default EKF2_EV_DELAY 5
+
+# Use EKF noise parameters for EV measurement R instead of OpenVINS'
+# reported covariance, which is wildly overconfident (~8 mm position, 5 mm/s
+# velocity while actually drifting tens of cm / degrees). Realistic noise
+# for monocular VIO, plus widened gates to ride out the GT->OV handoff.
+param set-default EKF2_EV_NOISE_MD 1
+param set-default EKF2_EVP_NOISE 0.15
+param set-default EKF2_EVV_NOISE 0.15
+param set-default EKF2_EVP_GATE 8
+param set-default EKF2_EVV_GATE 6
+
+# SITL: bypass preflight checks that block arming in simulation.
+# These use param set (not set-default) so they overwrite values that a
+# previous run may have persisted in parameters.bson.
+# NAV_DLL_ACT=0 removes the GCS connection requirement for arming.
+param set NAV_DLL_ACT 0
+# CBRK_SUPPLY_CHK=894281 is the standard SITL circuit-breaker key for the
+# power-supply preflight check. It silences "system power unavailable".
+param set CBRK_SUPPLY_CHK 894281
+# COM_RC_IN_MODE=1 selects MAVLink as the only manual control source and
+# disables RC calibration / connection requirements.
+param set COM_RC_IN_MODE 1
+# COM_RCL_EXCEPT=31 keeps PX4 from triggering RC-loss failsafe actions in
+# any mode (SITL has no RC input).
+param set COM_RCL_EXCEPT 31
+# COM_DLL_EXCEPT=31 likewise suppresses GCS-loss failsafe actions.
+param set COM_DLL_EXCEPT 31
+# COM_DISARM_PRFLT=-1 prevents PX4 from disarming on a preflight failure
+# (e.g. until the EKF has a vision-based estimate).
+param set COM_DISARM_PRFLT -1
