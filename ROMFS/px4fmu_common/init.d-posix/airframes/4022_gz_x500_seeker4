@@ -1,0 +1,12 @@
+#!/bin/sh
+#
+# @name Gazebo x500 seeker4
+#
+# @type Quadrotor
+#
+# Cardinal four-camera wide-angle rig. EKF settings match the mono-cam
+# airframe: fuse external-vision position, not its unobservable yaw.
+
+PX4_SIM_MODEL=${PX4_SIM_MODEL:=x500_seeker4}
+
+. ${R}etc/init.d-posix/airframes/4010_gz_x500_mono_cam
