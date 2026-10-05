@@ -120,7 +120,8 @@ if [[ $INSTALL_SIM == "true" ]]; then
 		# install gazebo from AUR
 		yay -S gazebo --noconfirm
 
-		if sudo dmidecode -t system | grep -q "Manufacturer: VMware, Inc." ; then
+		# dmidecode needs /dev/mem, which is not available in containers/VMs without DMI data
+		if sudo dmidecode -t system 2>/dev/null | grep -q "Manufacturer: VMware, Inc." ; then
 			# fix VMWare 3D graphics acceleration for gazebo
 			exportline="export SVGA_VGPU10=0"
 
