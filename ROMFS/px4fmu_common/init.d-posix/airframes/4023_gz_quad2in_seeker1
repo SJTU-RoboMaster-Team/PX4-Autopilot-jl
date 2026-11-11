@@ -1,0 +1,63 @@
+#!/bin/sh
+#
+# @name Gazebo quad2in seeker1
+#
+# @type Quadrotor
+#
+# 200 g, 2-inch, fully ducted quadrotor: forward Seeker1 camera, downward
+# MicoVIO module. The Gazebo model is generated from
+# rm.cv.drone2027.simulation/scripts/ros1/quad2in_airframe.py; the rotor
+# geometry, actuator range and hover point below must match it (checked by
+# scripts/tests/test_quad2in_seeker1_model.py). EKF2/preflight settings are the
+# monocular-VIO set shared with x500_mono_cam.
+
+PX4_SIM_MODEL=${PX4_SIM_MODEL:=quad2in_seeker1}
+
+. ${R}etc/init.d-posix/airframes/4010_gz_x500_mono_cam
+
+# Control allocation: rotors at (+-0.035, +-0.035) m, FRD, same X layout and
+# spin directions as the x500. KM is the model's momentConstant (yaw torque
+# per newton of thrust).
+param set-default CA_ROTOR0_PX 0.035
+param set-default CA_ROTOR0_PY 0.035
+param set-default CA_ROTOR0_KM 0.016
+
+param set-default CA_ROTOR1_PX -0.035
+param set-default CA_ROTOR1_PY -0.035
+param set-default CA_ROTOR1_KM 0.016
+
+param set-default CA_ROTOR2_PX 0.035
+param set-default CA_ROTOR2_PY -0.035
+param set-default CA_ROTOR2_KM -0.016
+
+param set-default CA_ROTOR3_PX -0.035
+param set-default CA_ROTOR3_PY 0.035
+param set-default CA_ROTOR3_KM -0.016
+
+# Actuator -> rotor speed [rad/s] = MIN + output * (MAX - MIN). With the model's
+# motorConstant 1.25e-7 the 200 g hovers at output 0.60 (rotor 1980 rad/s) and
+# one rotor tops out at 1.28 N (thrust-to-weight 2.6).
+param set-default SIM_GZ_EC_MIN1 150
+param set-default SIM_GZ_EC_MIN2 150
+param set-default SIM_GZ_EC_MIN3 150
+param set-default SIM_GZ_EC_MIN4 150
+
+param set-default SIM_GZ_EC_MAX1 3200
+param set-default SIM_GZ_EC_MAX2 3200
+param set-default SIM_GZ_EC_MAX3 3200
+param set-default SIM_GZ_EC_MAX4 3200
+
+param set-default MPC_THR_HOVER 0.60
+
+# Rate loop: the stock gains scaled by the x500 -> this airframe ratio of
+# angular acceleration per unit normalised torque (roll x0.21, pitch x0.34,
+# yaw x0.05) from the ~1.5e-4/2.4e-4/3.2e-4 kg m^2 inertia and 1.28 N rotors.
+# These are first estimates, not a step-response tuning.
+param set-default MC_ROLLRATE_P 0.032
+param set-default MC_ROLLRATE_I 0.043
+param set-default MC_ROLLRATE_D 0.00064
+param set-default MC_PITCHRATE_P 0.051
+param set-default MC_PITCHRATE_I 0.068
+param set-default MC_PITCHRATE_D 0.00103
+param set-default MC_YAWRATE_P 0.011
+param set-default MC_YAWRATE_I 0.005
